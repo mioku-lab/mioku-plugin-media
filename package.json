@@ -1,0 +1,26 @@
+{
+  "name": "mioku-plugin-media",
+  "version": "1.0.0",
+  "description": "流媒体解析插件，支持哔哩哔哩、抖音、小红书和快手平台",
+  "main": "index.ts",
+  "dependencies": {
+    "@ikenxuan/amagi": "^6.1.2"
+  },
+  "mioku": {
+    "services": [
+      "config",
+      "ai"
+    ],
+    "help": {
+      "title": "媒体解析",
+      "description": "自动识别并解析哔哩哔哩、抖音、小红书、快手的视频/图文链接",
+      "commands": [
+        {
+          "cmd": "发送包含平台链接的消息",
+          "desc": "自动识别并解析消息中的B站/抖音/小红书/快手链接，返回视频信息和视频文件",
+          "role": "member"
+        }
+      ]
+    }
+  }
+}
