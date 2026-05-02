@@ -27,8 +27,16 @@ export async function handleMediaError(options: {
 
   ctx.logger.error(`[media] ${platform} 解析失败: ${errorMessage}`, error);
 
+  const cause = (error instanceof Error && (error as any).cause) ? (error as any).cause : null;
+  const ckExpired = cause?.error?.errorDescription?.includes("ck可能已经失效");
+
+  if (ckExpired) {
+    await event.reply(`${platform} Cookie 已失效，请联系管理员更新`, true);
+    return;
+  }
+
   if (config.debug) {
-    await event.reply(`❌ ${platform} 解析失败: ${errorMessage}`, true);
+    await event.reply(`${platform} 解析失败: ${errorMessage}`, true);
     return;
   }
 

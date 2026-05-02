@@ -20,11 +20,7 @@ const DOUYIN_DOMAINS = [
   "jingxuan.douyin.com",
 ];
 
-const KUAISHOU_DOMAINS = [
-  "kuaishou.com",
-  "www.kuaishou.com",
-  "v.kuaishou.com",
-];
+const KUAISHOU_DOMAINS = ["kuaishou.com", "www.kuaishou.com", "v.kuaishou.com"];
 
 const XIAOHONGSHU_DOMAINS = [
   "xiaohongshu.com",
@@ -89,9 +85,7 @@ function extractB23UrlFromJsonCard(jsonStr: string): string | null {
 }
 
 function matchDomain(hostname: string, domains: string[]): boolean {
-  return domains.some(
-    (d) => hostname === d || hostname.endsWith("." + d),
-  );
+  return domains.some((d) => hostname === d || hostname.endsWith("." + d));
 }
 
 function parseBilibiliUrl(url: string): ParsedMediaUrl | null {
@@ -127,7 +121,12 @@ function parseBilibiliUrl(url: string): ParsedMediaUrl | null {
   if (matchDomain(hostname, BILIBILI_DOMAINS)) {
     const bangumiMatch = url.match(/\/bangumi\/play\/(ep\d+|ss\d+)/);
     if (bangumiMatch) {
-      return { platform: "bilibili", id: bangumiMatch[1], subtype: "bangumi", extra: { bangumiId: bangumiMatch[1] } };
+      return {
+        platform: "bilibili",
+        id: bangumiMatch[1],
+        subtype: "bangumi",
+        extra: { bangumiId: bangumiMatch[1] },
+      };
     }
 
     const articleMatch = url.match(/\/read\/(cv\d+)/i);
@@ -190,13 +189,23 @@ function parseXiaohongshuUrl(url: string): ParsedMediaUrl | null {
   const exploreMatch = url.match(XHS_NOTE_REGEX);
   if (exploreMatch) {
     const xsecToken = extractXsecToken(url);
-    return { platform: "xiaohongshu", id: exploreMatch[1], subtype: "note", extra: xsecToken ? { xsec_token: xsecToken } : undefined };
+    return {
+      platform: "xiaohongshu",
+      id: exploreMatch[1],
+      subtype: "note",
+      extra: xsecToken ? { xsec_token: xsecToken } : undefined,
+    };
   }
 
   const discoveryMatch = url.match(XHS_DISCOVERY_REGEX);
   if (discoveryMatch) {
     const xsecToken = extractXsecToken(url);
-    return { platform: "xiaohongshu", id: discoveryMatch[1], subtype: "note", extra: xsecToken ? { xsec_token: xsecToken } : undefined };
+    return {
+      platform: "xiaohongshu",
+      id: discoveryMatch[1],
+      subtype: "note",
+      extra: xsecToken ? { xsec_token: xsecToken } : undefined,
+    };
   }
 
   if (hostname.includes("xhslink.com")) {
@@ -206,7 +215,12 @@ function parseXiaohongshuUrl(url: string): ParsedMediaUrl | null {
   const fallbackMatch = url.match(XHSLINK_NOTE_REGEX);
   if (fallbackMatch && fallbackMatch[1].length === 24) {
     const xsecToken = extractXsecToken(url);
-    return { platform: "xiaohongshu", id: fallbackMatch[1], subtype: "note", extra: xsecToken ? { xsec_token: xsecToken } : undefined };
+    return {
+      platform: "xiaohongshu",
+      id: fallbackMatch[1],
+      subtype: "note",
+      extra: xsecToken ? { xsec_token: xsecToken } : undefined,
+    };
   }
 
   return null;
@@ -215,7 +229,10 @@ function parseXiaohongshuUrl(url: string): ParsedMediaUrl | null {
 function extractXsecToken(url: string): string | null {
   try {
     const parsed = new URL(url);
-    return parsed.searchParams.get("xsec_token") || parsed.searchParams.get("xsec_token");
+    return (
+      parsed.searchParams.get("xsec_token") ||
+      parsed.searchParams.get("xsec_token")
+    );
   } catch {
     const match = url.match(/xsec_token=([^&]+)/);
     return match ? match[1] : null;
@@ -299,7 +316,8 @@ export function parseMediaUrl(text: string): ParsedMediaUrl | null {
 }
 
 export function extractMediaUrlFromEvent(event: any): ParsedMediaUrl | null {
-  const rawText = typeof event.raw_message === "string" ? event.raw_message.trim() : "";
+  const rawText =
+    typeof event.raw_message === "string" ? event.raw_message.trim() : "";
   if (rawText) {
     const parsed = parseMediaUrl(rawText);
     if (parsed) return parsed;
@@ -376,6 +394,9 @@ export function isShortUrl(parsed: ParsedMediaUrl): boolean {
     return true;
   }
   if (parsed.platform === "xiaohongshu" && parsed.id.includes("xhslink.com")) {
+    return true;
+  }
+  if (parsed.platform === "douyin" && parsed.id.startsWith("http")) {
     return true;
   }
   return false;
