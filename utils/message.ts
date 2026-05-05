@@ -60,14 +60,21 @@ export function buildInfoMessage(parsed: ParsedMediaUrl, result: ParsedMediaResu
   return lines.join("\n");
 }
 
-function buildSummaryText(platform: string, stats?: MediaStats): string {
+function buildSummaryText(platform: string, subtype: string | undefined, stats?: MediaStats): string {
   if (!stats) return "";
 
   const parts: string[] = [];
 
   if (platform === "bilibili") {
-    if (stats.views != null && stats.views > 0) parts.push(`在线${formatCount(stats.views)}`);
-    if (stats.comments != null && stats.comments > 0) parts.push(`关注${formatCount(stats.comments)}`);
+    if (subtype === "live") {
+      if (stats.views != null && stats.views > 0) parts.push(`在线${formatCount(stats.views)}`);
+      if (stats.comments != null && stats.comments > 0) parts.push(`关注${formatCount(stats.comments)}`);
+    } else {
+      if (stats.likes != null) parts.push(`赞${formatCount(stats.likes)}`);
+      if (stats.coins != null) parts.push(`币${formatCount(stats.coins)}`);
+      if (stats.favorites != null) parts.push(`藏${formatCount(stats.favorites)}`);
+      if (stats.shares != null) parts.push(`转${formatCount(stats.shares)}`);
+    }
   } else {
     if (stats.likes != null) parts.push(`赞${formatCount(stats.likes)}`);
     if (stats.favorites != null) parts.push(`藏${formatCount(stats.favorites)}`);
@@ -81,7 +88,7 @@ function buildSummaryText(platform: string, stats?: MediaStats): string {
 function buildForwardDisplay(parsed: ParsedMediaUrl, result: ParsedMediaResult): ForwardDisplayOptions {
   const displayTitle = PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析";
 
-  let summary = buildSummaryText(parsed.platform, result.stats);
+  let summary = buildSummaryText(parsed.platform, parsed.subtype, result.stats);
 
   if (result.liveStatus) {
     summary = summary ? `${result.liveStatus} ${summary}` : result.liveStatus;
