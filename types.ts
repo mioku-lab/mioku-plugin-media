@@ -20,6 +20,7 @@ export interface ParsedMediaResult {
   videoUrl: string;
   duration?: number;
   stats?: MediaStats;
+  liveStatus?: string;
 }
 
 export interface MediaRuntimeState {

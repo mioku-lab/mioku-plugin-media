@@ -31,6 +31,7 @@ const XIAOHONGSHU_DOMAINS = [
 const BV_REGEX = /\b(BV[a-zA-Z0-9]{10,})\b/;
 const AV_REGEX = /\b(av(\d+))\b/i;
 const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+const BILIBILI_LIVE_REGEX = /\/(\d+)(?:\?|$)/;
 const DOUYIN_ID_REGEX = /\/video\/(\d+)/;
 const KUAISHOU_ID_REGEX = /\/short-video\/([a-zA-Z0-9_-]+)/;
 const XHS_NOTE_REGEX = /\/explore\/([a-f0-9]{24})/;
@@ -132,6 +133,18 @@ function parseBilibiliUrl(url: string): ParsedMediaUrl | null {
     const articleMatch = url.match(/\/read\/(cv\d+)/i);
     if (articleMatch) {
       return { platform: "bilibili", id: articleMatch[1], subtype: "article" };
+    }
+
+    const liveMatch = url.match(/\/live\/(\d+)/);
+    if (liveMatch) {
+      return { platform: "bilibili", id: liveMatch[1], subtype: "live" };
+    }
+
+    if (hostname === "live.bilibili.com" || hostname.endsWith(".live.bilibili.com")) {
+      const roomMatch = url.match(/\/(\d+)(?:\?|$)/);
+      if (roomMatch) {
+        return { platform: "bilibili", id: roomMatch[1], subtype: "live" };
+      }
     }
   }
 

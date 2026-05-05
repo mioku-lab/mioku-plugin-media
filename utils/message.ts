@@ -44,6 +44,10 @@ export function buildInfoMessage(parsed: ParsedMediaUrl, result: ParsedMediaResu
   lines.push(`【${platform}】${result.title}`);
   lines.push(`作者：${result.author}`);
 
+  if (result.liveStatus) {
+    lines.push(`状态：${result.liveStatus}`);
+  }
+
   if (result.duration && result.duration > 0) {
     lines.push(`时长：${formatDuration(result.duration)}`);
   }
@@ -62,10 +66,8 @@ function buildSummaryText(platform: string, stats?: MediaStats): string {
   const parts: string[] = [];
 
   if (platform === "bilibili") {
-    if (stats.likes != null) parts.push(`赞${formatCount(stats.likes)}`);
-    if (stats.coins != null) parts.push(`币${formatCount(stats.coins)}`);
-    if (stats.favorites != null) parts.push(`藏${formatCount(stats.favorites)}`);
-    if (stats.shares != null) parts.push(`转${formatCount(stats.shares)}`);
+    if (stats.views != null && stats.views > 0) parts.push(`在线${formatCount(stats.views)}`);
+    if (stats.comments != null && stats.comments > 0) parts.push(`关注${formatCount(stats.comments)}`);
   } else {
     if (stats.likes != null) parts.push(`赞${formatCount(stats.likes)}`);
     if (stats.favorites != null) parts.push(`藏${formatCount(stats.favorites)}`);
@@ -79,13 +81,19 @@ function buildSummaryText(platform: string, stats?: MediaStats): string {
 function buildForwardDisplay(parsed: ParsedMediaUrl, result: ParsedMediaResult): ForwardDisplayOptions {
   const displayTitle = PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析";
 
+  let summary = buildSummaryText(parsed.platform, result.stats);
+
+  if (result.liveStatus) {
+    summary = summary ? `${result.liveStatus} ${summary}` : result.liveStatus;
+  }
+
   return {
     source: displayTitle,
     news: [
       { text: truncateText(result.title, 26) },
       { text: result.author },
     ],
-    summary: buildSummaryText(parsed.platform, result.stats),
+    summary,
   };
 }
 
@@ -227,11 +235,21 @@ export async function sendMediaResult(
   } catch (primaryError) {
     try {
       if (event?.message_type === "group" && event?.group_id != null) {
-        await bot.sendGroupMsg(event.group_id, nodes);
+        const textPayload = [ctx.segment.text(buildInfoMessage(parsed, result))];
+        if (result.coverUrl) {
+          await bot.sendGroupMsg(event.group_id, [ctx.segment.image(result.coverUrl), ...textPayload]);
+        } else {
+          await bot.sendGroupMsg(event.group_id, textPayload);
+        }
         return;
       }
       if (event?.user_id != null) {
-        await bot.sendPrivateMsg(event.user_id, nodes);
+        const textPayload = [ctx.segment.text(buildInfoMessage(parsed, result))];
+        if (result.coverUrl) {
+          await bot.sendPrivateMsg(event.user_id, [ctx.segment.image(result.coverUrl), ...textPayload]);
+        } else {
+          await bot.sendPrivateMsg(event.user_id, textPayload);
+        }
         return;
       }
     } catch {

@@ -29,10 +29,18 @@ export async function handleMediaError(options: {
 
   const cause = (error instanceof Error && (error as any).cause) ? (error as any).cause : null;
   const ckExpired = cause?.error?.errorDescription?.includes("ck可能已经失效");
+  const a1Empty = errorMessage.includes("a1Value cannot be empty");
 
   if (ckExpired) {
     await event.reply(`${platform} Cookie 已失效，请联系管理员更新`, true);
     return;
+  }
+
+  if (a1Empty) {
+    if (platform === "小红书") {
+      await event.reply(`小红书解析需要配置 Cookie，请联系管理员配置小红书 Cookie后重试`, true);
+      return;
+    }
   }
 
   if (config.debug) {

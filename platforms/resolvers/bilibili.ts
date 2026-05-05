@@ -4,12 +4,12 @@ import type { PlatformResolver } from "./types";
 
 export class BilibiliResolver implements PlatformResolver {
   async resolve(client: any, parsed: ParsedMediaUrl): Promise<ParsedMediaResult> {
+    if (parsed.subtype === "live") {
+      return this.resolveLive(client, parsed);
+    }
+
     let bvid = parsed.id;
     let avid: number | undefined;
-
-    if (bvid.startsWith("av")) {
-      avid = parseInt(bvid.slice(2), 10);
-    }
 
     if (bvid.startsWith("http")) {
       const infoResult = await client.bilibili.fetcher.fetchVideoInfo({ bvid: "" });
@@ -91,5 +91,78 @@ export class BilibiliResolver implements PlatformResolver {
         danmaku: stat.danmaku,
       },
     };
+  }
+
+  private async resolveLive(client: any, parsed: ParsedMediaUrl): Promise<ParsedMediaResult> {
+    const roomId = parsed.id;
+
+    try {
+      const [liveInfoResult, initInfoResult] = await Promise.all([
+        client.bilibili.fetcher.fetchLiveRoomInfo({
+          methodType: "liveRoomInfo",
+          room_id: roomId,
+        }),
+        client.bilibili.fetcher.fetchLiveRoomInitInfo({
+          methodType: "liveRoomInit",
+          room_id: roomId,
+        }),
+      ]);
+
+      if (!liveInfoResult.success) {
+        throw new Error(`B站直播间信息获取失败: ${liveInfoResult.message}`);
+      }
+
+      const liveData = liveInfoResult.data?.data || liveInfoResult.data;
+      if (!liveData) {
+        throw new Error("B站直播间信息为空");
+      }
+
+      const initData = initInfoResult.data?.data || initInfoResult.data;
+      const anchorUid = initData?.uid || liveData.uid;
+
+      let author = "未知主播";
+      if (anchorUid) {
+        try {
+          const userCardResult = await client.bilibili.fetcher.fetchUserCard({
+            host_mid: anchorUid.toString(),
+          });
+          if (userCardResult.success) {
+            const cardData = userCardResult.data?.data || userCardResult.data;
+            author = cardData?.card?.uname || cardData?.uname || author;
+          }
+        } catch {
+          // ignore user card fetch errors
+        }
+      }
+
+      const title = liveData.title || "未知标题";
+      const description = liveData.description || "";
+      const coverUrl = liveData.user_cover || liveData.cover || "";
+      const liveStatus = liveData.live_status;
+      const isLive = liveStatus === 1;
+      const online = liveData.online || 0;
+      const attention = liveData.attention || 0;
+
+      return {
+        title,
+        author,
+        description,
+        coverUrl,
+        videoUrl: isLive ? `https://live.bilibili.com/${roomId}` : "",
+        duration: 0,
+        stats: {
+          likes: 0,
+          coins: 0,
+          favorites: 0,
+          shares: 0,
+          views: online,
+          comments: attention,
+          danmaku: 0,
+        },
+        liveStatus: isLive ? "直播中" : "未开播",
+      };
+    } catch (error) {
+      throw new Error(`B站直播间解析失败: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }
