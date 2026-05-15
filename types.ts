@@ -21,6 +21,16 @@ export interface ParsedMediaResult {
   duration?: number;
   stats?: MediaStats;
   liveStatus?: string;
+  /** 图集/合辑的图片列表 */
+  images?: string[];
+  /** 图集/合辑的短视频/实况图视频URL列表 */
+  videoUrls?: string[];
+  /** 图集/合辑的背景音乐URL */
+  musicUrl?: string;
+  /** 是否包含实况图 */
+  hasLivePhoto?: boolean;
+  /** 是否为合辑（图集中的多图组合） */
+  isSlides?: boolean;
 }
 
 export interface MediaRuntimeState {

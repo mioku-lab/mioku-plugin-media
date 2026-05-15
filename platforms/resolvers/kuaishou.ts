@@ -40,12 +40,22 @@ export class KuaishouResolver implements PlatformResolver {
       videoUrl = photo.manifest.adaptationSet[0].representation[0].url;
     }
 
+    // 检查是否为图片内容（photoUrl 为空但有图片列表）
+    const images: string[] = [];
+    if (!videoUrl && photo.images && Array.isArray(photo.images)) {
+      for (const img of photo.images) {
+        const url = img?.url || img?.url_list?.[0] || img?.download_addr?.url_list?.[0] || "";
+        if (url) images.push(url);
+      }
+    }
+
     return {
       title,
       author,
       description,
       coverUrl,
       videoUrl,
+      images: images.length > 0 ? images : undefined,
       duration,
       stats: {
         likes: photo.likeCount || photo.likeCnt,

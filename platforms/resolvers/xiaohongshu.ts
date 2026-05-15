@@ -39,12 +39,27 @@ export class XiaohongshuResolver implements PlatformResolver {
         noteData.image_list?.[0]?.url_pre ||
         "";
 
+      // 收集图片列表
+      const images: string[] = [];
+      if (noteData.image_list && Array.isArray(noteData.image_list)) {
+        for (const img of noteData.image_list) {
+          const url =
+            img?.url ||
+            img?.url_default ||
+            img?.url_pre ||
+            img?.download_addr?.url_list?.[0] ||
+            "";
+          if (url) images.push(url);
+        }
+      }
+
       return {
         title,
         author,
         description,
         coverUrl,
         videoUrl: "",
+        images: images.length > 0 ? images : undefined,
         stats: buildXhsStats(noteData.interact_info),
       };
     }
@@ -70,12 +85,52 @@ export class XiaohongshuResolver implements PlatformResolver {
         "";
     }
 
+    // 收集图片列表
+    const images: string[] = [];
+    if (noteCard.image_list && Array.isArray(noteCard.image_list)) {
+      for (const img of noteCard.image_list) {
+        const url =
+          img?.url ||
+          img?.url_default ||
+          img?.url_pre ||
+          img?.download_addr?.url_list?.[0] ||
+          "";
+        if (url) images.push(url);
+      }
+    }
+
+    // 判断是否有实况图（检查是否有 stream 数据）
+    const hasLivePhoto = noteCard.image_list?.some(
+      (img: any) => img.live_photo && img.stream
+    );
+
+    // 收集实况图视频流URL
+    const videoUrls: string[] = [];
+    if (noteCard.image_list && Array.isArray(noteCard.image_list)) {
+      for (const img of noteCard.image_list) {
+        if (img.stream) {
+          // 按优先级 h264 > h265 > av1 > h266
+          const streamData = img.stream;
+          if (streamData.h264?.length > 0) {
+            videoUrls.push(streamData.h264[0].master_url);
+          } else if (streamData.h265?.length > 0) {
+            videoUrls.push(streamData.h265[0].master_url);
+          } else if (streamData.av1?.length > 0) {
+            videoUrls.push(streamData.av1[0].master_url);
+          }
+        }
+      }
+    }
+
     return {
       title,
       author,
       description,
       coverUrl,
       videoUrl,
+      images: images.length > 0 ? images : undefined,
+      videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
+      hasLivePhoto,
       stats: buildXhsStats(noteCard.interact_info),
     };
   }

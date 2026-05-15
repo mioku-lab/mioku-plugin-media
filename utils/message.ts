@@ -57,6 +57,14 @@ export function buildInfoMessage(parsed: ParsedMediaUrl, result: ParsedMediaResu
     lines.push(`简介：${desc}`);
   }
 
+  // 对于图片内容，显示数量信息
+  if (result.images && result.images.length > 0) {
+    lines.push(`图片：${result.images.length}张`);
+  }
+  if (result.videoUrls && result.videoUrls.length > 0) {
+    lines.push(`视频：${result.videoUrls.length}个`);
+  }
+
   return lines.join("\n");
 }
 
@@ -92,6 +100,16 @@ function buildForwardDisplay(parsed: ParsedMediaUrl, result: ParsedMediaResult):
 
   if (result.liveStatus) {
     summary = summary ? `${result.liveStatus} ${summary}` : result.liveStatus;
+  }
+
+  // 对于图片集/合辑，增加内容数量信息
+  if (result.images && result.images.length > 0) {
+    const imageInfo = `${result.images.length}张图片`;
+    summary = summary ? `${imageInfo} ${summary}` : imageInfo;
+  }
+  if (result.videoUrls && result.videoUrls.length > 0) {
+    const videoInfo = `${result.videoUrls.length}个视频`;
+    summary = summary ? `${videoInfo} ${summary}` : videoInfo;
   }
 
   return {
@@ -148,7 +166,34 @@ function buildForwardNodes(
     content: [ctx.segment.text(infoText)],
   } as SendNodeContentElement);
 
-  if (result.videoUrl) {
+  // 处理图片集/合辑
+  if (result.images && result.images.length > 0) {
+    // 如果既有图片又有视频/实况图，发送纯图片
+    // 否则直接发送图片
+    for (const imageUrl of result.images) {
+      nodes.push({
+        type: "node",
+        user_id: userId,
+        nickname,
+        content: [ctx.segment.image(imageUrl)],
+      } as SendNodeContentElement);
+    }
+  }
+
+  // 处理短视频/实况图视频
+  if (result.videoUrls && result.videoUrls.length > 0) {
+    for (const videoUrl of result.videoUrls) {
+      nodes.push({
+        type: "node",
+        user_id: userId,
+        nickname,
+        content: [(ctx.segment as any).video(videoUrl)],
+      } as SendNodeContentElement);
+    }
+  }
+
+  // 处理常规视频（单个视频）
+  if (result.videoUrl && (!result.videoUrls || result.videoUrls.length === 0)) {
     nodes.push({
       type: "node",
       user_id: userId,
