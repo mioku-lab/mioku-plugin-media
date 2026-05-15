@@ -3,23 +3,41 @@ import type { ParsedMediaUrl } from "../types";
 import type { PlatformResolver } from "./types";
 
 export class BilibiliResolver implements PlatformResolver {
+  private readonly BV_REGEX = /\b(BV[a-zA-Z0-9]{10,})\b/;
+  private readonly AV_REGEX = /\b(av\d+)\b/i;
+
   async resolve(client: any, parsed: ParsedMediaUrl): Promise<ParsedMediaResult> {
     if (parsed.subtype === "live") {
       return this.resolveLive(client, parsed);
     }
 
+    // 如果 id 是短链接 URL，先尝试解析出 BV 号
     let bvid = parsed.id;
     let avid: number | undefined;
 
     if (bvid.startsWith("http")) {
-      const infoResult = await client.bilibili.fetcher.fetchVideoInfo({ bvid: "" });
-      if (!infoResult.success) {
-        throw new Error(`B站视频信息获取失败: ${infoResult.message}`);
-      }
-      const data = infoResult.data?.data || infoResult.data;
-      bvid = data?.bvid || "";
-      avid = data?.aid;
-      if (!bvid) {
+      // 尝试从 URL 中直接提取 BV 号
+      const bvMatch = bvid.match(this.BV_REGEX);
+      const avMatch = bvid.match(this.AV_REGEX);
+      if (bvMatch) {
+        bvid = bvMatch[1];
+      } else if (avMatch) {
+        // 如果是 AV 号，先转换成 BV 号
+        avid = parseInt(avMatch[1].replace("av", ""), 10);
+        try {
+          const infoResult = await client.bilibili.fetcher.fetchVideoInfo({ bvid: `av${avid}` });
+          if (infoResult.success) {
+            const data = infoResult.data?.data || infoResult.data;
+            bvid = data?.bvid || "";
+            avid = data?.aid;
+          }
+        } catch {
+          // ignore conversion errors
+        }
+        if (!bvid) {
+          throw new Error("B站短链接解析失败，无法获取BV号");
+        }
+      } else {
         throw new Error("B站短链接解析失败，无法获取BV号");
       }
     }
