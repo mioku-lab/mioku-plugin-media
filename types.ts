@@ -35,5 +35,15 @@ export interface ParsedMediaResult {
 
 export interface MediaRuntimeState {
   config: MediaConfig;
-  amagiClient: any;
+  amagiClient: {
+    kuaishou: {
+      fetcher: {
+        fetchVideoWork(options: { photoId: string; typeMode?: "strict" | "loose" }): Promise<{
+          success: boolean;
+          data: any;
+          message?: string;
+        }>;
+      };
+    };
+  };
 }

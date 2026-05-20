@@ -20,7 +20,7 @@ const DOUYIN_DOMAINS = [
   "jingxuan.douyin.com",
 ];
 
-const KUAISHOU_DOMAINS = ["kuaishou.com", "www.kuaishou.com", "v.kuaishou.com"];
+const KUAISHOU_DOMAINS = ["kuaishou.com", "www.kuaishou.com", "v.kuaishou.com", "v.m.chenzhongtech.com", "m.chenzhongtech.com", "chenzhongtech.com"];
 
 const XIAOHONGSHU_DOMAINS = [
   "xiaohongshu.com",
@@ -34,6 +34,7 @@ const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
 const BILIBILI_LIVE_REGEX = /\/(\d+)(?:\?|$)/;
 const DOUYIN_ID_REGEX = /\/video\/(\d+)/;
 const KUAISHOU_ID_REGEX = /\/short-video\/([a-zA-Z0-9_-]+)/;
+const KUAISHOU_PHOTO_REGEX = /(?:\/fw)?\/photo\/([a-zA-Z0-9_-]+)/;
 const XHS_NOTE_REGEX = /\/explore\/([a-f0-9]{24})/;
 const XHS_DISCOVERY_REGEX = /\/discovery\/item\/([a-f0-9]{24})/;
 const XHSLINK_NOTE_REGEX = /\/([a-f0-9]{24})/;
@@ -187,9 +188,15 @@ function parseKuaishouUrl(url: string): ParsedMediaUrl | null {
     return { platform: "kuaishou", id: shortMatch[1], subtype: "video" };
   }
 
-  const photoMatch = url.match(/photo\/(\d+)/);
+  const photoMatch = url.match(KUAISHOU_PHOTO_REGEX);
   if (photoMatch) {
     return { platform: "kuaishou", id: photoMatch[1], subtype: "video" };
+  }
+
+  // Handle v.kuaishou.com/xxx short URLs like https://v.kuaishou.com/KfhlEcGV
+  const shortCodeMatch = url.match(/:\/\/[^/]+\/([a-zA-Z0-9_-]+)/);
+  if (shortCodeMatch) {
+    return { platform: "kuaishou", id: shortCodeMatch[1], subtype: "video" };
   }
 
   return null;
@@ -410,6 +417,9 @@ export function isShortUrl(parsed: ParsedMediaUrl): boolean {
     return true;
   }
   if (parsed.platform === "douyin" && parsed.id.startsWith("http")) {
+    return true;
+  }
+  if (parsed.platform === "kuaishou" && parsed.id.startsWith("http")) {
     return true;
   }
   return false;

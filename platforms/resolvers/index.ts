@@ -1,4 +1,4 @@
-import type { ParsedMediaUrl } from "../types";
+import type { AmagiClient, ParsedMediaUrl } from "../types";
 import type { ParsedMediaResult } from "../../types";
 import type { PlatformResolver } from "./types";
 import { BilibiliResolver } from "./bilibili";
@@ -14,7 +14,7 @@ const resolvers: Record<string, PlatformResolver> = {
 };
 
 export async function resolveMedia(
-  client: any,
+  client: AmagiClient,
   parsed: ParsedMediaUrl,
 ): Promise<ParsedMediaResult> {
   const resolver = resolvers[parsed.platform];

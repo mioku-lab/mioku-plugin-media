@@ -6,3 +6,16 @@ export interface ParsedMediaUrl {
   subtype?: "video" | "article" | "note" | "bangumi" | "live";
   extra?: Record<string, string>;
 }
+
+export interface AmagiClient {
+  kuaishou: {
+    fetcher: {
+      fetchVideoWork(options: { photoId: string; typeMode?: "strict" | "loose" }): Promise<{
+        success: boolean;
+        code?: number;
+        data: any;
+        message?: string;
+      }>;
+    };
+  };
+}

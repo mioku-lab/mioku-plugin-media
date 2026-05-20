@@ -1,7 +1,8 @@
 import { createAmagiClient } from "@ikenxuan/amagi";
 import type { MediaConfig } from "../types";
+import type { AmagiClient } from "./types";
 
-export function createMediaAmagiClient(config: MediaConfig): any {
+export function createMediaAmagiClient(config: MediaConfig): AmagiClient {
   const cookies: Record<string, string> = {};
 
   if (config.cookies.bilibili?.trim()) {
@@ -17,8 +18,14 @@ export function createMediaAmagiClient(config: MediaConfig): any {
     cookies.xiaohongshu = config.cookies.xiaohongshu.trim();
   }
 
-  return createAmagiClient({
+  const client = createAmagiClient({
     cookies,
     request: { timeout: 15000 },
   });
+
+  return {
+    kuaishou: {
+      fetcher: client.kuaishou.fetcher,
+    },
+  };
 }

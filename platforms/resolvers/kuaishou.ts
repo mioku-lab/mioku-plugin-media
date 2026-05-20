@@ -1,13 +1,19 @@
 import type { ParsedMediaResult } from "../../types";
-import type { ParsedMediaUrl } from "../types";
+import type { AmagiClient, ParsedMediaUrl } from "../types";
 import type { PlatformResolver } from "./types";
 
 export class KuaishouResolver implements PlatformResolver {
-  async resolve(client: any, parsed: ParsedMediaUrl): Promise<ParsedMediaResult> {
+  async resolve(client: AmagiClient, parsed: ParsedMediaUrl): Promise<ParsedMediaResult> {
     const photoId = parsed.id;
 
     const result = await client.kuaishou.fetcher.fetchVideoWork({ photoId });
     if (!result.success) {
+      const isCookieError = result.code === 401 ||
+        (result.data as any)?.errorDescription?.includes("ck可能已经失效") ||
+        (result.data as any)?.errorDescription?.includes("接口返回内容为空");
+      if (isCookieError) {
+        throw new Error("快手Cookie无效或已过期，请检查配置");
+      }
       throw new Error(`快手作品解析失败: ${result.message}`);
     }
 
@@ -40,7 +46,6 @@ export class KuaishouResolver implements PlatformResolver {
       videoUrl = photo.manifest.adaptationSet[0].representation[0].url;
     }
 
-    // 检查是否为图片内容（photoUrl 为空但有图片列表）
     const images: string[] = [];
     if (!videoUrl && photo.images && Array.isArray(photo.images)) {
       for (const img of photo.images) {
