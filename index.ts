@@ -1,5 +1,5 @@
 import { definePlugin, type MiokiContext } from "mioki";
-import type { ConfigService } from "../../src/services/config/tpyes";
+import type { ConfigService } from "mioku";
 import type { MediaConfig } from "./types";
 import { MEDIA_DEFAULTS } from "./config";
 import { createMediaAmagiClient } from "./platforms/amagi-client";

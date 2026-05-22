@@ -1,8 +1,9 @@
 {
   "name": "mioku-plugin-media",
-  "version": "1.1.0",
+  "version": "0.8.0",
   "description": "流媒体解析插件，支持哔哩哔哩、抖音、小红书和快手平台",
   "main": "index.ts",
+  "type": "module",
   "keywords": [
     "mioku"
   ],
@@ -28,6 +29,14 @@
           "role": "member"
         }
       ]
+    },
+    "peerDependencies": {
+      "mioku": "^0.8.0",
+      "mioki": "^0.16.0"
+    },
+    "devDependencies": {
+      "mioku": "workspace:*",
+      "mioki": "^0.16.0"
     }
   }
 }

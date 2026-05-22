@@ -3,7 +3,7 @@ import {
   getPluginRuntimeState,
   resetPluginRuntimeState,
   setPluginRuntimeState,
-} from "../../src";
+} from "mioku";
 
 const PLUGIN_NAME = "media";
 

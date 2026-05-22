@@ -1,4 +1,4 @@
-import type { Platform, ParsedMediaUrl } from "./types";
+import type { ParsedMediaUrl } from "./types";
 
 const BILIBILI_DOMAINS = [
   "bilibili.com",
@@ -20,7 +20,14 @@ const DOUYIN_DOMAINS = [
   "jingxuan.douyin.com",
 ];
 
-const KUAISHOU_DOMAINS = ["kuaishou.com", "www.kuaishou.com", "v.kuaishou.com", "v.m.chenzhongtech.com", "m.chenzhongtech.com", "chenzhongtech.com"];
+const KUAISHOU_DOMAINS = [
+  "kuaishou.com",
+  "www.kuaishou.com",
+  "v.kuaishou.com",
+  "v.m.chenzhongtech.com",
+  "m.chenzhongtech.com",
+  "chenzhongtech.com",
+];
 
 const XIAOHONGSHU_DOMAINS = [
   "xiaohongshu.com",
@@ -141,7 +148,10 @@ function parseBilibiliUrl(url: string): ParsedMediaUrl | null {
       return { platform: "bilibili", id: liveMatch[1], subtype: "live" };
     }
 
-    if (hostname === "live.bilibili.com" || hostname.endsWith(".live.bilibili.com")) {
+    if (
+      hostname === "live.bilibili.com" ||
+      hostname.endsWith(".live.bilibili.com")
+    ) {
       const roomMatch = url.match(/\/(\d+)(?:\?|$)/);
       if (roomMatch) {
         return { platform: "bilibili", id: roomMatch[1], subtype: "live" };

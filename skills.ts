@@ -1,7 +1,10 @@
-import type { AISkill, AITool } from "../../src";
-import type { SendNodeContentElement } from "napcat-sdk";
+import type { AISkill, AITool } from "mioku";
 import { getMediaRuntimeState } from "./runtime";
-import { parseMediaUrl, resolveShortUrl, isShortUrl } from "./platforms/url-parser";
+import {
+  parseMediaUrl,
+  resolveShortUrl,
+  isShortUrl,
+} from "./platforms/url-parser";
 import { resolveMedia } from "./platforms/resolvers";
 import { buildInfoMessage, sendMediaResult } from "./utils/message";
 
