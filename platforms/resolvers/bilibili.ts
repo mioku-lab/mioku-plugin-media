@@ -117,11 +117,9 @@ export class BilibiliResolver implements PlatformResolver {
     try {
       const [liveInfoResult, initInfoResult] = await Promise.all([
         client.bilibili.fetcher.fetchLiveRoomInfo({
-          methodType: "liveRoomInfo",
           room_id: roomId,
         }),
         client.bilibili.fetcher.fetchLiveRoomInitInfo({
-          methodType: "liveRoomInit",
           room_id: roomId,
         }),
       ]);
@@ -142,7 +140,7 @@ export class BilibiliResolver implements PlatformResolver {
       if (anchorUid) {
         try {
           const userCardResult = await client.bilibili.fetcher.fetchUserCard({
-            host_mid: anchorUid.toString(),
+            host_mid: Number(anchorUid),
           });
           if (userCardResult.success) {
             const cardData = userCardResult.data?.data || userCardResult.data;

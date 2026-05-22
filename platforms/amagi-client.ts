@@ -24,6 +24,9 @@ export function createMediaAmagiClient(config: MediaConfig): AmagiClient {
   });
 
   return {
+    bilibili: {
+      fetcher: client.bilibili.fetcher,
+    },
     kuaishou: {
       fetcher: client.kuaishou.fetcher,
     },
