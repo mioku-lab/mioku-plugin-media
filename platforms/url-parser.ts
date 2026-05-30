@@ -206,7 +206,8 @@ function parseKuaishouUrl(url: string): ParsedMediaUrl | null {
   // Handle v.kuaishou.com/xxx short URLs like https://v.kuaishou.com/KfhlEcGV
   const shortCodeMatch = url.match(/:\/\/[^/]+\/([a-zA-Z0-9_-]+)/);
   if (shortCodeMatch) {
-    return { platform: "kuaishou", id: shortCodeMatch[1], subtype: "video" };
+    // Store full URL so isShortUrl can detect it and resolveShortUrl can work
+    return { platform: "kuaishou", id: url, subtype: "video" };
   }
 
   return null;
@@ -393,29 +394,29 @@ export function extractMediaUrlFromEvent(event: any): ParsedMediaUrl | null {
 
 export function resolveShortUrl(url: string): Promise<string> {
   return new Promise((resolve) => {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => {
-        controller.abort();
-        resolve(url);
-      }, 5000);
-
-      fetch(url, {
-        redirect: "follow",
-        signal: controller.signal,
-        method: "HEAD",
-      })
-        .then((response) => {
-          clearTimeout(timeout);
-          resolve(response.url || url);
-        })
-        .catch(() => {
-          clearTimeout(timeout);
-          resolve(url);
-        });
-    } catch {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
       resolve(url);
-    }
+    }, 10000);
+
+    fetch(url, {
+      redirect: "follow",
+      signal: controller.signal,
+    })
+      .then((response) => {
+        clearTimeout(timeout);
+        const finalUrl = response.url;
+        if (finalUrl && finalUrl !== url) {
+          resolve(finalUrl);
+        } else {
+          resolve(url);
+        }
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        resolve(url);
+      });
   });
 }
 

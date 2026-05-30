@@ -27,8 +27,14 @@ export function createMediaAmagiClient(config: MediaConfig): AmagiClient {
     bilibili: {
       fetcher: client.bilibili.fetcher,
     },
+    douyin: {
+      fetcher: client.douyin.fetcher,
+    },
     kuaishou: {
       fetcher: client.kuaishou.fetcher,
+    },
+    xiaohongshu: {
+      fetcher: client.xiaohongshu.fetcher,
     },
   };
 }

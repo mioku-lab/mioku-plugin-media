@@ -5,7 +5,7 @@ import { MEDIA_DEFAULTS } from "./config";
 import { createMediaAmagiClient } from "./platforms/amagi-client";
 import { extractMediaUrlFromEvent, resolveShortUrl, isShortUrl } from "./platforms/url-parser";
 import { resolveMedia } from "./platforms/resolvers";
-import { sendMediaResult } from "./utils/message";
+import { sendMediaResult, sendDurationLimitResult } from "./utils/message";
 import { handleMediaError } from "./utils/error-handler";
 import { setMediaRuntimeState, resetMediaRuntimeState } from "./runtime";
 
@@ -102,6 +102,23 @@ export default definePlugin({
         }
 
         const result = await resolveMedia(amagiClient, parsed);
+
+        if (result.duration && config.maxVideoDurationSeconds > 0) {
+          if (result.duration > config.maxVideoDurationSeconds) {
+            ctx.logger.warn(
+              `[media] 视频时长超过限制: ${result.duration}秒 > ${config.maxVideoDurationSeconds}秒`,
+            );
+            await sendDurationLimitResult(
+              ctx,
+              event,
+              parsed,
+              result,
+              Math.floor(config.maxVideoDurationSeconds / 60),
+            );
+            return;
+          }
+        }
+
         await sendMediaResult(ctx, event, parsed, result);
       } catch (error) {
         await handleMediaError({

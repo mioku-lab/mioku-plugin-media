@@ -5,6 +5,7 @@ export interface MediaConfig {
     kuaishou: string;
     xiaohongshu: string;
   };
+  maxVideoDurationSeconds: number;
   debug: boolean;
 }
 
@@ -15,5 +16,6 @@ export const MEDIA_DEFAULTS: MediaConfig = {
     kuaishou: "",
     xiaohongshu: "",
   },
+  maxVideoDurationSeconds: 20 * 60,
   debug: false,
 };

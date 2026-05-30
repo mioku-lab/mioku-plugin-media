@@ -15,7 +15,7 @@ fields:
   - key: base.cookies.kuaishou
     label: 快手 Cookie
     type: textarea
-    description: 快手 Cookie，配置后可获取更完整的视频信息。留空则使用基础解析。
+    description: 快手 Cookie，配置后可正常解析作品。留空则无法解析。
 
   - key: base.cookies.xiaohongshu
     label: 小红书 Cookie
@@ -26,4 +26,9 @@ fields:
     label: 调试模式
     type: switch
     description: 开启后解析失败时直接发送错误信息，不走 AI 通知
+
+  - key: base.maxVideoDurationSeconds
+    label: 视频解析时长上限
+    type: number
+    description: 允许解析的视频最大时长（秒），默认 1200（20分钟）。超过限制的视频将被拒绝解析。
 ---

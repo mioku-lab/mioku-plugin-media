@@ -1,4 +1,8 @@
-import type { SendNodeElement, SendNodeContentElement, ForwardDisplayOptions } from "napcat-sdk";
+import type {
+  SendNodeElement,
+  SendNodeContentElement,
+  ForwardDisplayOptions,
+} from "napcat-sdk";
 import type { ParsedMediaResult, MediaStats } from "../types";
 import type { ParsedMediaUrl } from "../platforms/types";
 
@@ -37,7 +41,10 @@ function formatCount(count?: number): string {
   return String(count);
 }
 
-export function buildInfoMessage(parsed: ParsedMediaUrl, result: ParsedMediaResult): string {
+export function buildInfoMessage(
+  parsed: ParsedMediaUrl,
+  result: ParsedMediaResult,
+): string {
   const platform = PLATFORM_NAMES[parsed.platform] || parsed.platform;
   const lines: string[] = [];
 
@@ -68,24 +75,32 @@ export function buildInfoMessage(parsed: ParsedMediaUrl, result: ParsedMediaResu
   return lines.join("\n");
 }
 
-function buildSummaryText(platform: string, subtype: string | undefined, stats?: MediaStats): string {
+function buildSummaryText(
+  platform: string,
+  subtype: string | undefined,
+  stats?: MediaStats,
+): string {
   if (!stats) return "";
 
   const parts: string[] = [];
 
   if (platform === "bilibili") {
     if (subtype === "live") {
-      if (stats.views != null && stats.views > 0) parts.push(`在线${formatCount(stats.views)}`);
-      if (stats.comments != null && stats.comments > 0) parts.push(`关注${formatCount(stats.comments)}`);
+      if (stats.views != null && stats.views > 0)
+        parts.push(`在线${formatCount(stats.views)}`);
+      if (stats.comments != null && stats.comments > 0)
+        parts.push(`关注${formatCount(stats.comments)}`);
     } else {
       if (stats.likes != null) parts.push(`赞${formatCount(stats.likes)}`);
       if (stats.coins != null) parts.push(`币${formatCount(stats.coins)}`);
-      if (stats.favorites != null) parts.push(`藏${formatCount(stats.favorites)}`);
+      if (stats.favorites != null)
+        parts.push(`藏${formatCount(stats.favorites)}`);
       if (stats.shares != null) parts.push(`转${formatCount(stats.shares)}`);
     }
   } else {
     if (stats.likes != null) parts.push(`赞${formatCount(stats.likes)}`);
-    if (stats.favorites != null) parts.push(`藏${formatCount(stats.favorites)}`);
+    if (stats.favorites != null)
+      parts.push(`藏${formatCount(stats.favorites)}`);
     if (stats.shares != null) parts.push(`转${formatCount(stats.shares)}`);
     if (stats.comments != null) parts.push(`评${formatCount(stats.comments)}`);
   }
@@ -93,7 +108,10 @@ function buildSummaryText(platform: string, subtype: string | undefined, stats?:
   return parts.join(" ");
 }
 
-function buildForwardDisplay(parsed: ParsedMediaUrl, result: ParsedMediaResult): ForwardDisplayOptions {
+function buildForwardDisplay(
+  parsed: ParsedMediaUrl,
+  result: ParsedMediaResult,
+): ForwardDisplayOptions {
   const displayTitle = PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析";
 
   let summary = buildSummaryText(parsed.platform, parsed.subtype, result.stats);
@@ -114,10 +132,7 @@ function buildForwardDisplay(parsed: ParsedMediaUrl, result: ParsedMediaResult):
 
   return {
     source: displayTitle,
-    news: [
-      { text: truncateText(result.title, 26) },
-      { text: result.author },
-    ],
+    news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
     summary,
   };
 }
@@ -149,6 +164,15 @@ function buildForwardNodes(
 ): SendNodeElement[] {
   const nodes: SendNodeElement[] = [];
 
+  // 简介文字优先
+  const infoText = buildInfoMessage(parsed, result);
+  nodes.push({
+    type: "node",
+    user_id: userId,
+    nickname,
+    content: [ctx.segment.text(infoText)],
+  } as SendNodeContentElement);
+
   if (result.coverUrl) {
     nodes.push({
       type: "node",
@@ -157,14 +181,6 @@ function buildForwardNodes(
       content: [ctx.segment.image(result.coverUrl)],
     } as SendNodeContentElement);
   }
-
-  const infoText = buildInfoMessage(parsed, result);
-  nodes.push({
-    type: "node",
-    user_id: userId,
-    nickname,
-    content: [ctx.segment.text(infoText)],
-  } as SendNodeContentElement);
 
   // 处理图片集/合辑
   if (result.images && result.images.length > 0) {
@@ -254,7 +270,10 @@ export async function sendMediaResult(
   }
 
   const nickname = String(
-    ctx?.bot?.nickname || event?.sender?.card || event?.sender?.nickname || "媒体解析",
+    ctx?.bot?.nickname ||
+      event?.sender?.card ||
+      event?.sender?.nickname ||
+      "媒体解析",
   );
   const userId = String(selfId || ctx?.bot?.bot_id || event?.self_id || 0);
 
@@ -262,53 +281,112 @@ export async function sendMediaResult(
   const forwardPayload = toOneBotForwardFormat(nodes);
   const display = buildForwardDisplay(parsed, result);
 
-  try {
-    if (event?.message_type === "group" && event?.group_id != null) {
-      await bot.api("send_group_forward_msg", {
-        group_id: event.group_id,
-        messages: forwardPayload,
-        source: display.source,
-        news: display.news,
-        summary: display.summary,
-      });
-      return;
-    }
+  if (event?.message_type === "group" && event?.group_id != null) {
+    await bot.api("send_group_forward_msg", {
+      group_id: event.group_id,
+      messages: forwardPayload,
+      source: display.source,
+      news: display.news,
+      summary: display.summary,
+    });
+    return;
+  }
 
-    if (event?.user_id != null) {
-      await bot.api("send_private_forward_msg", {
-        user_id: event.user_id,
-        messages: forwardPayload,
-        source: display.source,
-        news: display.news,
-        summary: display.summary,
-      });
-      return;
-    }
-  } catch (primaryError) {
-    try {
-      if (event?.message_type === "group" && event?.group_id != null) {
-        const textPayload = [ctx.segment.text(buildInfoMessage(parsed, result))];
-        if (result.coverUrl) {
-          await bot.sendGroupMsg(event.group_id, [ctx.segment.image(result.coverUrl), ...textPayload]);
-        } else {
-          await bot.sendGroupMsg(event.group_id, textPayload);
-        }
-        return;
-      }
-      if (event?.user_id != null) {
-        const textPayload = [ctx.segment.text(buildInfoMessage(parsed, result))];
-        if (result.coverUrl) {
-          await bot.sendPrivateMsg(event.user_id, [ctx.segment.image(result.coverUrl), ...textPayload]);
-        } else {
-          await bot.sendPrivateMsg(event.user_id, textPayload);
-        }
-        return;
-      }
-    } catch {
-      // fallback to text reply
+  if (event?.user_id != null) {
+    await bot.api("send_private_forward_msg", {
+      user_id: event.user_id,
+      messages: forwardPayload,
+      source: display.source,
+      news: display.news,
+      summary: display.summary,
+    });
+  }
+}
+
+export async function sendDurationLimitResult(
+  ctx: any,
+  event: any,
+  parsed: ParsedMediaUrl,
+  result: ParsedMediaResult,
+  limitMinutes: number,
+): Promise<void> {
+  const selfId = event?.self_id != null ? Number(event.self_id) : undefined;
+  const bot =
+    selfId != null && typeof ctx?.pickBot === "function"
+      ? ctx.pickBot(selfId)
+      : undefined;
+
+  if (!bot) {
+    await event.reply(
+      `【${PLATFORM_NAMES[parsed.platform] || parsed.platform}】视频太大了，发不出来～`,
+    );
+    return;
+  }
+
+  const nickname = String(
+    ctx?.bot?.nickname ||
+      event?.sender?.card ||
+      event?.sender?.nickname ||
+      "媒体解析",
+  );
+  const userId = String(selfId || ctx?.bot?.bot_id || event?.self_id || 0);
+
+  const nodes: SendNodeElement[] = [];
+
+  const platform = PLATFORM_NAMES[parsed.platform] || parsed.platform;
+  const mins = Math.floor((result.duration || 0) / 60);
+  const secs = (result.duration || 0) % 60;
+  const infoText = `【${platform}】${result.title}\n作者：${result.author}\n时长：${mins}分${secs}秒\n\n哎嘿，视频太大了发不出来～请选择更短的视频（不超过 ${limitMinutes} 分钟）`;
+
+  nodes.push({
+    type: "node",
+    user_id: userId,
+    nickname,
+    content: [ctx.segment.text(infoText)],
+  } as SendNodeContentElement);
+
+  if (result.coverUrl) {
+    nodes.push({
+      type: "node",
+      user_id: userId,
+      nickname,
+      content: [ctx.segment.image(result.coverUrl)],
+    } as SendNodeContentElement);
+  }
+
+  // 只发图片，不发视频
+  if (result.images && result.images.length > 0) {
+    for (const imageUrl of result.images) {
+      nodes.push({
+        type: "node",
+        user_id: userId,
+        nickname,
+        content: [ctx.segment.image(imageUrl)],
+      } as SendNodeContentElement);
     }
   }
 
-  const infoText = buildInfoMessage(parsed, result);
-  await event.reply(infoText);
+  const forwardPayload = toOneBotForwardFormat(nodes);
+  const displayTitle = PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析";
+
+  if (event?.message_type === "group" && event?.group_id != null) {
+    await bot.api("send_group_forward_msg", {
+      group_id: event.group_id,
+      messages: forwardPayload,
+      source: displayTitle,
+      news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
+      summary: `视频太长无法发送（${mins}分${secs}秒）`,
+    });
+    return;
+  }
+
+  if (event?.user_id != null) {
+    await bot.api("send_private_forward_msg", {
+      user_id: event.user_id,
+      messages: forwardPayload,
+      source: displayTitle,
+      news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
+      summary: `视频太长无法发送（${mins}分${secs}秒）`,
+    });
+  }
 }

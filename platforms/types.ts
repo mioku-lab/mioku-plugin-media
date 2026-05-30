@@ -44,8 +44,34 @@ export interface AmagiClient {
         typeMode?: "strict" | "loose";
       }): Promise<{
         success: boolean;
-        code?: number;
+        code?: number | string | undefined;
         data: any;
+        message?: string;
+        error?: any;
+      }>;
+    };
+  };
+  douyin: {
+    fetcher: {
+      parseWork(options: {
+        aweme_id: string;
+        typeMode?: "strict" | "loose";
+      }): Promise<{
+        success: boolean;
+        data?: any;
+        message?: string;
+      }>;
+    };
+  };
+  xiaohongshu: {
+    fetcher: {
+      fetchNoteDetail(options: {
+        note_id: string;
+        xsec_token: string;
+        typeMode?: "strict" | "loose";
+      }): Promise<{
+        success: boolean;
+        data?: any;
         message?: string;
       }>;
     };
