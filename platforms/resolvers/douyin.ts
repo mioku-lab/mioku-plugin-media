@@ -49,7 +49,7 @@ export class DouyinResolver implements PlatformResolver {
       detail.video?.origin_cover?.url_list?.[0] ||
       detail.video?.dynamic_cover?.url_list?.[0] ||
       "";
-    const duration = detail.duration;
+    const duration = detail.duration ? Math.floor(detail.duration / 1000) : undefined;
 
     let videoUrl = "";
 

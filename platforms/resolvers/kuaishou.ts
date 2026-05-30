@@ -87,7 +87,7 @@ export class KuaishouResolver implements PlatformResolver {
     const author = authorInfo.name || "未知作者";
     const description = photo.caption || "";
     const coverUrl = photo.coverUrl || "";
-    const duration = photo.duration;
+    const duration = photo.duration ? Math.floor(photo.duration / 1000) : undefined;
 
     let videoUrl = "";
 
