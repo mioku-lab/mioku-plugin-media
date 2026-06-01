@@ -1,8 +1,5 @@
 import type { MiokiContext } from "mioki";
 import type { MediaConfig } from "../types";
-import type { ParsedMediaUrl } from "../platforms/types";
-import type { ParsedMediaResult } from "../types";
-import type { SendNodeElement, SendNodeContentElement } from "napcat-sdk";
 
 function normalizeErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -25,7 +22,7 @@ export async function handleMediaError(options: {
   platform: string;
   config: MediaConfig;
 }): Promise<void> {
-  const { ctx, error, platform } = options;
+  const { ctx, event, error, platform } = options;
   const errorMessage = normalizeErrorMessage(error);
   ctx.logger.error(`[media] ${platform} 解析失败: ${errorMessage}`);
 
@@ -39,9 +36,12 @@ export async function handleMediaError(options: {
   if (!bot) return;
 
   const nickname = String(
-    ctx?.bot?.nickname || event?.sender?.card || event?.sender?.nickname || "媒体解析",
+    ctx?.bot?.nickname ||
+      event?.sender?.card ||
+      event?.sender?.nickname ||
+      "媒体解析",
   );
-  const userId = String(selfId || ctx?.bot?.bot_id || event?.self_id || 0);
+  const userId = String(selfId || event?.self_id || 0);
 
   // 构建错误提示消息
   const errorText = `【${platform}】解析失败\n${errorMessage}`;
