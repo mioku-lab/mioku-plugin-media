@@ -1,6 +1,6 @@
 {
   "name": "mioku-plugin-media",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "流媒体解析插件，支持哔哩哔哩、抖音、小红书和快手平台",
   "main": "index.ts",
   "type": "module",
@@ -18,6 +18,28 @@
     "services": [
       "config",
       "ai"
+    ],
+    "accessHooks": [
+      {
+        "id": "哔哩哔哩视频解析",
+        "match": "/(?:bilibili\\.com|b23\\.tv|bili2233\\.cn)/",
+        "description": "匹配消息中包含的 B站 链接"
+      },
+      {
+        "id": "抖音媒体解析",
+        "match": "/(?:douyin\\.com|iesdouyin\\.com)/",
+        "description": "匹配消息中包含的 抖音 链接"
+      },
+      {
+        "id": "快手媒体解析",
+        "match": "/(?:kuaishou\\.com|chenzhongtech\\.com)/",
+        "description": "匹配消息中包含的 快手 链接"
+      },
+      {
+        "id": "小红书媒体解析",
+        "match": "/(?:xiaohongshu\\.com|xhslink\\.com)/",
+        "description": "匹配消息中包含的 小红书 链接"
+      }
     ],
     "help": {
       "title": "媒体解析",
@@ -38,5 +60,8 @@
       "mioku": "workspace:*",
       "mioki": "^0.16.0"
     }
+  },
+  "devDependencies": {
+    "jiti": "^2.7.0"
   }
 }
