@@ -1,6 +1,6 @@
 {
   "name": "mioku-plugin-media",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "流媒体解析插件，支持哔哩哔哩、抖音、小红书和快手平台",
   "main": "index.ts",
   "type": "module",
