@@ -31,7 +31,9 @@ const mediaSkills: AISkill[] = [
           required: ["url"],
         },
         handler: async (args: any, runtimeCtx?: any) => {
-          const runtime = getMediaRuntimeState();
+          const runtime = getMediaRuntimeState() as unknown as {
+            amagiClient?: Parameters<typeof resolveMedia>[0];
+          };
           if (!runtime.amagiClient) {
             return "媒体解析插件尚未初始化";
           }
@@ -55,7 +57,7 @@ const mediaSkills: AISkill[] = [
               }
             }
 
-            const result = await resolveMedia(runtime.amagiClient, parsed);
+            const result = await resolveMedia(runtime.amagiClient as any, parsed);
             const info = buildInfoMessage(parsed, result);
 
             const ctx = runtimeCtx?.ctx;

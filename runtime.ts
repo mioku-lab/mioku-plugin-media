@@ -10,11 +10,11 @@ const PLUGIN_NAME = "media";
 export function setMediaRuntimeState(
   nextState: Partial<MediaRuntimeState>,
 ): MediaRuntimeState {
-  return setPluginRuntimeState<MediaRuntimeState>(PLUGIN_NAME, nextState);
+  return setPluginRuntimeState(PLUGIN_NAME, nextState) as MediaRuntimeState;
 }
 
 export function getMediaRuntimeState(): MediaRuntimeState {
-  return getPluginRuntimeState<MediaRuntimeState>(PLUGIN_NAME);
+  return getPluginRuntimeState(PLUGIN_NAME) as MediaRuntimeState;
 }
 
 export function resetMediaRuntimeState(): void {
