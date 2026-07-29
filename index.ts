@@ -1,5 +1,5 @@
 import { definePlugin, type MiokiContext } from "mioki";
-import type { ConfigService } from "mioku";
+import type { AIService, ConfigService } from "mioku";
 import type { MediaConfig } from "./types";
 import { MEDIA_DEFAULTS } from "./config";
 import { createMediaAmagiClient } from "./platforms/amagi-client";
@@ -7,7 +7,7 @@ import { extractMediaUrlFromEvent, resolveShortUrl, isShortUrl } from "./platfor
 import { resolveMedia } from "./platforms/resolvers";
 import { sendMediaResult, sendDurationLimitResult } from "./utils/message";
 import { handleMediaError } from "./utils/error-handler";
-import { setMediaRuntimeState, resetMediaRuntimeState } from "./runtime";
+import { createMediaSkills } from "./skills/media";
 
 const REACTION_EMOJI_ID = 60;
 
@@ -35,6 +35,7 @@ export default definePlugin({
 
   async setup(ctx: MiokiContext) {
     const configService = ctx.services?.config as ConfigService | undefined;
+    const aiService = ctx.services?.ai as AIService | undefined;
     let config = cloneConfig(MEDIA_DEFAULTS);
 
     if (configService) {
@@ -49,7 +50,9 @@ export default definePlugin({
 
     let amagiClient = createMediaAmagiClient(config);
 
-    setMediaRuntimeState({ config, amagiClient });
+    if (aiService) {
+      for (const skill of createMediaSkills(amagiClient)) aiService.registerSkill(skill);
+    }
 
     const disposers: Array<() => void> = [];
     if (configService) {
@@ -57,7 +60,10 @@ export default definePlugin({
         configService.onConfigChange("media", "base", (next) => {
           config = next as MediaConfig;
           amagiClient = createMediaAmagiClient(config);
-          setMediaRuntimeState({ config, amagiClient });
+          if (aiService) {
+            aiService.removeSkill("media");
+            for (const skill of createMediaSkills(amagiClient)) aiService.registerSkill(skill);
+          }
         }),
       );
     }
@@ -132,10 +138,8 @@ export default definePlugin({
     });
 
     return () => {
-      for (const dispose of disposers) {
-        dispose();
-      }
-      resetMediaRuntimeState();
+      for (const dispose of disposers) dispose();
+      if (aiService) aiService.removeSkill("media");
     };
   },
 });
