@@ -68,7 +68,7 @@ export default definePlugin({
       );
     }
 
-    ctx.handle("message", async (event: any) => {
+    ctx.handle("message", async (event) => {
       if (event.user_id === event.self_id) return;
 
       const parsed = extractMediaUrlFromEvent(event);
