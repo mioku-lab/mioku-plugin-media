@@ -1,5 +1,5 @@
 import { definePlugin, type MiokiContext } from "mioki";
-import type { AIService, ConfigService } from "mioku";
+import { getService, Services } from "mioku";
 import type { MediaConfig } from "./types";
 import { MEDIA_DEFAULTS } from "./config";
 import { createMediaAmagiClient } from "./platforms/amagi-client";
@@ -34,8 +34,8 @@ export default definePlugin({
   description: "流媒体解析插件，支持哔哩哔哩、抖音、小红书和快手平台",
 
   async setup(ctx: MiokiContext) {
-    const configService = ctx.services?.config as ConfigService | undefined;
-    const aiService = ctx.services?.ai as AIService | undefined;
+    const configService = getService(ctx, Services.Config);
+    const aiService = getService(ctx, Services.AI);
     let config = cloneConfig(MEDIA_DEFAULTS);
 
     if (configService) {
