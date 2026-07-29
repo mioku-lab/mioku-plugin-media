@@ -7,7 +7,9 @@ import {
 import { resolveMedia } from "../platforms/resolvers";
 import { buildInfoMessage, sendMediaResult } from "../utils/message";
 
-export function createMediaSkills(amagiClient: Parameters<typeof resolveMedia>[0]): AISkill[] {
+export function createMediaSkills(
+  amagiClient: Parameters<typeof resolveMedia>[0],
+): AISkill[] {
   return [
     {
       name: "media",
@@ -64,7 +66,7 @@ export function createMediaSkills(amagiClient: Parameters<typeof resolveMedia>[0
                 }
               }
 
-              return `已解析媒体内容。以下是解析结果，知晓即可：\n${info}${result.videoUrl ? `\n视频地址: ${result.videoUrl}` : ""}`;
+              return `已发送解析结果给用户。以下是解析结果，知晓即可：\n${info}${result.videoUrl ? `\n视频地址: ${result.videoUrl}` : ""}`;
             } catch (error) {
               return `解析失败: ${error instanceof Error ? error.message : String(error)}`;
             }
