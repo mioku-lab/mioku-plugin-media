@@ -1,8 +1,10 @@
 import type {
-  SendNodeElement,
-  SendNodeContentElement,
-  ForwardDisplayOptions,
-} from "napcat-sdk";
+  Bot,
+  ForwardSendNode,
+  MessageEvent,
+  MiokuContext,
+} from "mioku";
+import { forwardSend } from "mioku";
 import type { ParsedMediaResult, MediaStats } from "../types";
 import type { ParsedMediaUrl } from "../platforms/types";
 
@@ -64,7 +66,6 @@ export function buildInfoMessage(
     lines.push(`简介：${desc}`);
   }
 
-  // 对于图片内容，显示数量信息
   if (result.images && result.images.length > 0) {
     lines.push(`图片：${result.images.length}张`);
   }
@@ -108,213 +109,161 @@ function buildSummaryText(
   return parts.join(" ");
 }
 
-function buildForwardDisplay(
-  parsed: ParsedMediaUrl,
-  result: ParsedMediaResult,
-): ForwardDisplayOptions {
-  const displayTitle = PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析";
-
-  let summary = buildSummaryText(parsed.platform, parsed.subtype, result.stats);
-
-  if (result.liveStatus) {
-    summary = summary ? `${result.liveStatus} ${summary}` : result.liveStatus;
-  }
-
-  // 对于图片集/合辑，增加内容数量信息
-  if (result.images && result.images.length > 0) {
-    const imageInfo = `${result.images.length}张图片`;
-    summary = summary ? `${imageInfo} ${summary}` : imageInfo;
-  }
-  if (result.videoUrls && result.videoUrls.length > 0) {
-    const videoInfo = `${result.videoUrls.length}个视频`;
-    summary = summary ? `${videoInfo} ${summary}` : videoInfo;
-  }
-
-  return {
-    source: displayTitle,
-    news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
-    summary,
-  };
-}
-
-function normalizeNodeContent(content: any[]): any[] {
-  return content.map((element: any) => {
-    if (
-      element &&
-      typeof element === "object" &&
-      "type" in element &&
-      "data" in element
-    ) {
-      return element;
-    }
-    if (element && typeof element === "object" && "type" in element) {
-      const { type, ...data } = element;
-      return { type, data };
-    }
-    return element;
-  });
-}
-
 function buildForwardNodes(
-  ctx: any,
+  ctx: MiokuContext,
   userId: string,
   nickname: string,
   parsed: ParsedMediaUrl,
   result: ParsedMediaResult,
-): SendNodeElement[] {
-  const nodes: SendNodeElement[] = [];
+): ForwardSendNode[] {
+  const nodes: ForwardSendNode[] = [];
 
-  // 简介文字优先
   const infoText = buildInfoMessage(parsed, result);
   nodes.push({
-    type: "node",
     user_id: userId,
     nickname,
     content: [ctx.segment.text(infoText)],
-  } as SendNodeContentElement);
+  });
 
   if (result.coverUrl) {
     nodes.push({
-      type: "node",
       user_id: userId,
       nickname,
       content: [ctx.segment.image(result.coverUrl)],
-    } as SendNodeContentElement);
+    });
   }
 
-  // 处理图片集/合辑
   if (result.images && result.images.length > 0) {
-    // 如果既有图片又有视频/实况图，发送纯图片
-    // 否则直接发送图片
     for (const imageUrl of result.images) {
       nodes.push({
-        type: "node",
         user_id: userId,
         nickname,
         content: [ctx.segment.image(imageUrl)],
-      } as SendNodeContentElement);
+      });
     }
   }
 
-  // 处理短视频/实况图视频
   if (result.videoUrls && result.videoUrls.length > 0) {
     for (const videoUrl of result.videoUrls) {
       nodes.push({
-        type: "node",
         user_id: userId,
         nickname,
-        content: [(ctx.segment as any).video(videoUrl)],
-      } as SendNodeContentElement);
+        content: [ctx.segment.video(videoUrl)],
+      });
     }
-  }
-
-  // 处理常规视频（单个视频）
-  if (result.videoUrl && (!result.videoUrls || result.videoUrls.length === 0)) {
+  } else if (result.videoUrl) {
     nodes.push({
-      type: "node",
       user_id: userId,
       nickname,
-      content: [(ctx.segment as any).video(result.videoUrl)],
-    } as SendNodeContentElement);
+      content: [ctx.segment.video(result.videoUrl)],
+    });
   }
 
   return nodes;
 }
 
-function toOneBotForwardFormat(nodes: SendNodeElement[]): any[] {
-  return nodes.map((node) => {
-    if (node.type !== "node") return node;
+interface SendForwardOptions {
+  bot: Bot;
+  ctx: MiokuContext;
+  event: MessageEvent;
+  nodes: readonly ForwardSendNode[];
+  display: { source: string; news: ReadonlyArray<{ text: string }>; summary: string };
+}
 
-    if ("id" in node && node.id) {
-      return {
-        type: "node",
-        data: {
-          user_id: (node as any).user_id,
-          nickname: (node as any).nickname,
-          id: node.id,
-        },
-      };
+function targetFromEvent(event: MessageEvent): { type: "group"; group_id: string } | { type: "private"; user_id: string } {
+  return event.message_type === "group" && event.group_id
+    ? { type: "group", group_id: String(event.group_id) }
+    : { type: "private", user_id: String(event.user_id ?? "") };
+}
+
+async function sendForwardMessage(options: SendForwardOptions): Promise<void> {
+  const { bot, ctx, event, nodes, display } = options;
+  const target = targetFromEvent(event);
+
+  if (bot.supports(forwardSend)) {
+    await bot.invoke(forwardSend, {
+      target,
+      nodes,
+      source: display.source,
+      news: display.news,
+      summary: display.summary,
+    });
+    return;
+  }
+
+  const segments: Array<string | ReturnType<MiokuContext["segment"]["text"]>> = [];
+  const header = `${display.source}\n${display.news.map((n) => n.text).join(" / ")}\n${display.summary}`.trim();
+  if (header) segments.push(ctx.segment.text(header));
+  for (const node of nodes) {
+    const content = node.content;
+    const list = Array.isArray(content) ? content : [content];
+    for (const item of list) {
+      if (typeof item === "string") segments.push(ctx.segment.text(item));
+      else segments.push(item);
     }
-
-    const contentNode = node as SendNodeContentElement;
-    const content = Array.isArray(contentNode.content)
-      ? normalizeNodeContent(contentNode.content)
-      : [];
-
-    return {
-      type: "node",
-      data: {
-        user_id: contentNode.user_id,
-        nickname: contentNode.nickname,
-        content,
-      },
-    };
-  });
+  }
+  await bot.sendMessage(target, segments);
 }
 
 export async function sendMediaResult(
-  ctx: any,
-  event: any,
+  ctx: MiokuContext,
+  event: MessageEvent,
   parsed: ParsedMediaUrl,
   result: ParsedMediaResult,
 ): Promise<void> {
-  const selfId = event?.self_id != null ? Number(event.self_id) : undefined;
-  const bot =
-    selfId != null && typeof ctx?.pickBot === "function"
-      ? ctx.pickBot(selfId)
-      : undefined;
+  const selfId = event.self_id;
+  const bot = selfId != null ? ctx.pickBot(String(selfId)) : undefined;
 
   if (!bot) {
     await event.reply(buildInfoMessage(parsed, result));
     return;
   }
 
-  const nickname = String(
-    ctx?.bot?.nickname ||
-      event?.sender?.card ||
-      event?.sender?.nickname ||
-      "媒体解析",
-  );
-  const userId = String(selfId || ctx?.bot?.bot_id || event?.self_id || 0);
+  const nickname =
+    ctx.bot?.nickname ??
+    event.sender?.card ??
+    event.sender?.nickname ??
+    "媒体解析";
+  const userId = String(selfId || ctx.bot?.bot_id || event.self_id || 0);
 
   const nodes = buildForwardNodes(ctx, userId, nickname, parsed, result);
-  const forwardPayload = toOneBotForwardFormat(nodes);
-  const display = buildForwardDisplay(parsed, result);
+  const summary = buildSummaryText(parsed.platform, parsed.subtype, result.stats);
+  const livePrefix = result.liveStatus ? `${result.liveStatus} ` : "";
+  const imageCount = result.images?.length ?? 0;
+  const videoCount = result.videoUrls?.length ?? 0;
 
-  if (event?.message_type === "group" && event?.group_id != null) {
-    await bot.api("send_group_forward_msg", {
-      group_id: event.group_id,
-      messages: forwardPayload,
-      source: display.source,
-      news: display.news,
-      summary: display.summary,
-    });
-    return;
-  }
+  const extraSummary = [
+    imageCount > 0 ? `${imageCount}张图片` : "",
+    videoCount > 0 ? `${videoCount}个视频` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  if (event?.user_id != null) {
-    await bot.api("send_private_forward_msg", {
-      user_id: event.user_id,
-      messages: forwardPayload,
-      source: display.source,
-      news: display.news,
-      summary: display.summary,
-    });
-  }
+  await sendForwardMessage({
+    bot,
+    ctx,
+    event,
+    nodes,
+    display: {
+      source: PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析",
+      news: [
+        { text: truncateText(result.title, 26) },
+        { text: result.author },
+      ],
+      summary: `${livePrefix}${summary} ${extraSummary}`.trim(),
+    },
+  });
 }
 
 export async function sendDurationLimitResult(
-  ctx: any,
-  event: any,
+  ctx: MiokuContext,
+  event: MessageEvent,
   parsed: ParsedMediaUrl,
   result: ParsedMediaResult,
   limitMinutes: number,
 ): Promise<void> {
-  const selfId = event?.self_id != null ? Number(event.self_id) : undefined;
-  const bot =
-    selfId != null && typeof ctx?.pickBot === "function"
-      ? ctx.pickBot(selfId)
-      : undefined;
+  const selfId = event.self_id;
+  const bot = selfId != null ? ctx.pickBot(String(selfId)) : undefined;
 
   if (!bot) {
     await event.reply(
@@ -323,70 +272,56 @@ export async function sendDurationLimitResult(
     return;
   }
 
-  const nickname = String(
-    ctx?.bot?.nickname ||
-      event?.sender?.card ||
-      event?.sender?.nickname ||
-      "媒体解析",
-  );
-  const userId = String(selfId || ctx?.bot?.bot_id || event?.self_id || 0);
-
-  const nodes: SendNodeElement[] = [];
+  const nickname =
+    ctx.bot?.nickname ??
+    event.sender?.card ??
+    event.sender?.nickname ??
+    "媒体解析";
+  const userId = String(selfId || ctx.bot?.bot_id || event.self_id || 0);
 
   const platform = PLATFORM_NAMES[parsed.platform] || parsed.platform;
   const mins = Math.floor((result.duration || 0) / 60);
   const secs = (result.duration || 0) % 60;
   const infoText = `【${platform}】${result.title}\n作者：${result.author}\n时长：${mins}分${secs}秒\n\n哎嘿，视频太大了发不出来～请选择更短的视频（不超过 ${limitMinutes} 分钟）`;
 
-  nodes.push({
-    type: "node",
-    user_id: userId,
-    nickname,
-    content: [ctx.segment.text(infoText)],
-  } as SendNodeContentElement);
+  const nodes: ForwardSendNode[] = [
+    {
+      user_id: userId,
+      nickname,
+      content: [ctx.segment.text(infoText)],
+    },
+  ];
 
   if (result.coverUrl) {
     nodes.push({
-      type: "node",
       user_id: userId,
       nickname,
       content: [ctx.segment.image(result.coverUrl)],
-    } as SendNodeContentElement);
+    });
   }
 
-  // 只发图片，不发视频
   if (result.images && result.images.length > 0) {
     for (const imageUrl of result.images) {
       nodes.push({
-        type: "node",
         user_id: userId,
         nickname,
         content: [ctx.segment.image(imageUrl)],
-      } as SendNodeContentElement);
+      });
     }
   }
 
-  const forwardPayload = toOneBotForwardFormat(nodes);
-  const displayTitle = PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析";
-
-  if (event?.message_type === "group" && event?.group_id != null) {
-    await bot.api("send_group_forward_msg", {
-      group_id: event.group_id,
-      messages: forwardPayload,
-      source: displayTitle,
-      news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
+  await sendForwardMessage({
+    bot,
+    ctx,
+    event,
+    nodes,
+    display: {
+      source: PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析",
+      news: [
+        { text: truncateText(result.title, 26) },
+        { text: result.author },
+      ],
       summary: `视频太长无法发送（${mins}分${secs}秒）`,
-    });
-    return;
-  }
-
-  if (event?.user_id != null) {
-    await bot.api("send_private_forward_msg", {
-      user_id: event.user_id,
-      messages: forwardPayload,
-      source: displayTitle,
-      news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
-      summary: `视频太长无法发送（${mins}分${secs}秒）`,
-    });
-  }
+    },
+  });
 }

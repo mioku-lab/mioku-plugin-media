@@ -1,4 +1,4 @@
-import { definePlugin, type MiokiContext } from "mioki";
+import { definePlugin, type Bot, type MiokuContext } from "mioku";
 import { getService, Services } from "mioku";
 import type { MediaConfig } from "./types";
 import { MEDIA_DEFAULTS } from "./config";
@@ -15,16 +15,16 @@ function cloneConfig<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-async function addReaction(bot: any, messageId: number | string): Promise<void> {
+async function addReaction(bot: Bot | undefined, messageId: string | number | undefined): Promise<void> {
   if (!bot || messageId == null) return;
   try {
-    await bot.api("set_msg_emoji_like", {
+    await bot.sendApi("set_msg_emoji_like", {
       message_id: messageId,
       emoji_id: REACTION_EMOJI_ID,
       set: true,
     });
   } catch {
-    // ignore reaction errors
+    // best-effort reaction
   }
 }
 
@@ -33,7 +33,7 @@ export default definePlugin({
   version: "1.0.0",
   description: "流媒体解析插件，支持哔哩哔哩、抖音、小红书和快手平台",
 
-  async setup(ctx: MiokiContext) {
+  async setup(ctx: MiokuContext) {
     const configService = getService(ctx, Services.Config);
     const aiService = getService(ctx, Services.AI);
     let config = cloneConfig(MEDIA_DEFAULTS);
@@ -74,7 +74,7 @@ export default definePlugin({
       const parsed = extractMediaUrlFromEvent(event);
       if (!parsed) return;
 
-      const messageId = event.message_id ?? event.message_seq;
+      const messageId = event.message_id ?? (event.raw as { message_seq?: number | string } | undefined)?.message_seq;
 
       const platformLabel =
         parsed.platform === "bilibili"
@@ -87,11 +87,8 @@ export default definePlugin({
 
       ctx.logger.info(`[media] 检测到${platformLabel}链接，开始解析...`);
 
-      const selfId = event?.self_id != null ? Number(event.self_id) : undefined;
-      const bot =
-        selfId != null && typeof ctx?.pickBot === "function"
-          ? ctx.pickBot(selfId)
-          : undefined;
+      const selfId = event.self_id != null ? String(event.self_id) : undefined;
+      const bot = selfId != null ? ctx.pickBot(selfId) : undefined;
 
       await addReaction(bot, messageId);
 
@@ -99,7 +96,10 @@ export default definePlugin({
         if (isShortUrl(parsed)) {
           ctx.logger.info(`[media] 检测到短链接，正在解析: ${parsed.id}`);
           const resolvedUrl = await resolveShortUrl(parsed.id);
-          const reParsed = extractMediaUrlFromEvent({ raw_message: resolvedUrl, message: [{ type: "text", data: { text: resolvedUrl } }] });
+          const reParsed = extractMediaUrlFromEvent({
+            raw_message: resolvedUrl,
+            message: [{ type: "text", data: { text: resolvedUrl } }],
+          });
           if (reParsed) {
             Object.assign(parsed, reParsed);
           } else {

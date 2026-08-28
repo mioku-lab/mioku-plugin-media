@@ -1,4 +1,4 @@
-import type { MiokiContext } from "mioki";
+import type { MiokuContext } from "mioku";
 import type { MediaConfig } from "../types";
 
 function normalizeErrorMessage(error: unknown): string {
@@ -16,7 +16,7 @@ function normalizeErrorMessage(error: unknown): string {
 }
 
 export async function handleMediaError(options: {
-  ctx: MiokiContext;
+  ctx: MiokuContext;
   event: any;
   error: unknown;
   platform: string;
