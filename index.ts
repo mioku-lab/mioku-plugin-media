@@ -17,6 +17,7 @@ function cloneConfig<T>(value: T): T {
 
 async function addReaction(bot: Bot | undefined, messageId: string | number | undefined): Promise<void> {
   if (!bot || messageId == null) return;
+  if (bot.adapter !== "onebotv11") return; // set_msg_emoji_like 是 onebot 专属特殊 API
   try {
     await bot.sendApi("set_msg_emoji_like", {
       message_id: messageId,
@@ -87,8 +88,7 @@ export default definePlugin({
 
       ctx.logger.info(`[media] 检测到${platformLabel}链接，开始解析...`);
 
-      const selfId = event.self_id != null ? String(event.self_id) : undefined;
-      const bot = selfId != null ? ctx.pickBot(selfId) : undefined;
+      const bot = event.bot;
 
       await addReaction(bot, messageId);
 

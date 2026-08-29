@@ -1,10 +1,5 @@
-import type {
-  Bot,
-  ForwardSendNode,
-  MessageEvent,
-  MiokuContext,
-} from "mioku";
-import { forwardSend } from "mioku";
+import type { Bot, ForwardSendNode, MessageEvent, MiokuContext } from "mioku";
+import { UnsupportedCapabilityError } from "mioku";
 import type { ParsedMediaResult, MediaStats } from "../types";
 import type { ParsedMediaUrl } from "../platforms/types";
 
@@ -167,32 +162,42 @@ interface SendForwardOptions {
   ctx: MiokuContext;
   event: MessageEvent;
   nodes: readonly ForwardSendNode[];
-  display: { source: string; news: ReadonlyArray<{ text: string }>; summary: string };
+  display: {
+    source: string;
+    news: ReadonlyArray<{ text: string }>;
+    summary: string;
+  };
 }
 
-function targetFromEvent(event: MessageEvent): { type: "group"; group_id: string } | { type: "private"; user_id: string } {
+function targetFromEvent(
+  event: MessageEvent,
+): { type: "group"; group_id: string } | { type: "private"; user_id: string } {
   return event.message_type === "group" && event.group_id
-    ? { type: "group", group_id: String(event.group_id) }
-    : { type: "private", user_id: String(event.user_id ?? "") };
+    ? { type: "group", group_id: event.group_id }
+    : { type: "private", user_id: event.user_id ?? "" };
 }
 
 async function sendForwardMessage(options: SendForwardOptions): Promise<void> {
   const { bot, ctx, event, nodes, display } = options;
   const target = targetFromEvent(event);
 
-  if (bot.supports(forwardSend)) {
-    await bot.invoke(forwardSend, {
-      target,
-      nodes,
+  try {
+    await bot.sendForward(target, nodes, {
       source: display.source,
       news: display.news,
       summary: display.summary,
     });
     return;
+  } catch (error) {
+    if (!(error instanceof UnsupportedCapabilityError)) {
+      throw error;
+    }
   }
 
-  const segments: Array<string | ReturnType<MiokuContext["segment"]["text"]>> = [];
-  const header = `${display.source}\n${display.news.map((n) => n.text).join(" / ")}\n${display.summary}`.trim();
+  const segments: Array<string | ReturnType<MiokuContext["segment"]["text"]>> =
+    [];
+  const header =
+    `${display.source}\n${display.news.map((n) => n.text).join(" / ")}\n${display.summary}`.trim();
   if (header) segments.push(ctx.segment.text(header));
   for (const node of nodes) {
     const content = node.content;
@@ -212,7 +217,7 @@ export async function sendMediaResult(
   result: ParsedMediaResult,
 ): Promise<void> {
   const selfId = event.self_id;
-  const bot = selfId != null ? ctx.pickBot(String(selfId)) : undefined;
+  const bot = event.bot;
 
   if (!bot) {
     await event.reply(buildInfoMessage(parsed, result));
@@ -227,7 +232,11 @@ export async function sendMediaResult(
   const userId = String(selfId || ctx.bot?.bot_id || event.self_id || 0);
 
   const nodes = buildForwardNodes(ctx, userId, nickname, parsed, result);
-  const summary = buildSummaryText(parsed.platform, parsed.subtype, result.stats);
+  const summary = buildSummaryText(
+    parsed.platform,
+    parsed.subtype,
+    result.stats,
+  );
   const livePrefix = result.liveStatus ? `${result.liveStatus} ` : "";
   const imageCount = result.images?.length ?? 0;
   const videoCount = result.videoUrls?.length ?? 0;
@@ -246,10 +255,7 @@ export async function sendMediaResult(
     nodes,
     display: {
       source: PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析",
-      news: [
-        { text: truncateText(result.title, 26) },
-        { text: result.author },
-      ],
+      news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
       summary: `${livePrefix}${summary} ${extraSummary}`.trim(),
     },
   });
@@ -263,7 +269,7 @@ export async function sendDurationLimitResult(
   limitMinutes: number,
 ): Promise<void> {
   const selfId = event.self_id;
-  const bot = selfId != null ? ctx.pickBot(String(selfId)) : undefined;
+  const bot = event.bot;
 
   if (!bot) {
     await event.reply(
@@ -317,10 +323,7 @@ export async function sendDurationLimitResult(
     nodes,
     display: {
       source: PLATFORM_DISPLAY_TITLES[parsed.platform] || "媒体解析",
-      news: [
-        { text: truncateText(result.title, 26) },
-        { text: result.author },
-      ],
+      news: [{ text: truncateText(result.title, 26) }, { text: result.author }],
       summary: `视频太长无法发送（${mins}分${secs}秒）`,
     },
   });
