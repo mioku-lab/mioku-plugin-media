@@ -31,8 +31,6 @@ async function addReaction(bot: Bot | undefined, messageId: string | number | un
 
 export default definePlugin({
   name: "media",
-  version: "1.0.0",
-  description: "流媒体解析插件，支持哔哩哔哩、抖音、小红书和快手平台",
 
   async setup(ctx: MiokuContext) {
     const configService = getService(ctx, Services.Config);
