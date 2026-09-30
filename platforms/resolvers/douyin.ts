@@ -3,7 +3,10 @@ import type { ParsedMediaUrl } from "../types";
 import type { PlatformResolver } from "./types";
 
 export class DouyinResolver implements PlatformResolver {
-  async resolve(client: any, parsed: ParsedMediaUrl): Promise<ParsedMediaResult> {
+  async resolve(
+    client: any,
+    parsed: ParsedMediaUrl,
+  ): Promise<ParsedMediaResult> {
     const awemeId = parsed.id;
 
     const result = await client.douyin.fetcher.parseWork({ aweme_id: awemeId });
@@ -49,7 +52,9 @@ export class DouyinResolver implements PlatformResolver {
       detail.video?.origin_cover?.url_list?.[0] ||
       detail.video?.dynamic_cover?.url_list?.[0] ||
       "";
-    const duration = detail.duration ? Math.floor(detail.duration / 1000) : undefined;
+    const duration = detail.duration
+      ? Math.floor(detail.duration / 1000)
+      : undefined;
 
     let videoUrl = "";
 
@@ -65,8 +70,7 @@ export class DouyinResolver implements PlatformResolver {
             (curr.bit_rate || 0) > (best.bit_rate || 0) ? curr : best,
           detail.video.bit_rate[0],
         );
-        videoUrl =
-          bestBitrate?.play_addr?.url_list?.[0] || "";
+        videoUrl = bestBitrate?.play_addr?.url_list?.[0] || "";
       }
     }
 
@@ -151,7 +155,7 @@ export class DouyinResolver implements PlatformResolver {
 
     // 判断是否有实况图（clip_type !== 2）
     const hasLivePhoto = detail.images?.some(
-      (img: any) => (img.clip_type ?? 2) !== 2
+      (img: any) => (img.clip_type ?? 2) !== 2,
     );
 
     // 对于图集/合辑，可能有背景音乐
@@ -179,7 +183,7 @@ export class DouyinResolver implements PlatformResolver {
         if (img.clip_type === 4 || img.clip_type === 5) {
           if (img.video?.play_addr_h264?.uri) {
             videoUrls.push(
-              `https://aweme.snssdk.com/aweme/v1/play/?video_id=${img.video.play_addr_h264.uri}&ratio=1080p&line=0`
+              `https://aweme.snssdk.com/aweme/v1/play/?video_id=${img.video.play_addr_h264.uri}&ratio=1080p&line=0`,
             );
           }
         }

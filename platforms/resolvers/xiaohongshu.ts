@@ -3,7 +3,10 @@ import type { ParsedMediaUrl } from "../types";
 import type { PlatformResolver } from "./types";
 
 export class XiaohongshuResolver implements PlatformResolver {
-  async resolve(client: any, parsed: ParsedMediaUrl): Promise<ParsedMediaResult> {
+  async resolve(
+    client: any,
+    parsed: ParsedMediaUrl,
+  ): Promise<ParsedMediaResult> {
     const noteId = parsed.id;
     const xsecToken = parsed.extra?.xsec_token || "";
 
@@ -101,7 +104,7 @@ export class XiaohongshuResolver implements PlatformResolver {
 
     // 判断是否有实况图（检查是否有 stream 数据）
     const hasLivePhoto = noteCard.image_list?.some(
-      (img: any) => img.live_photo && img.stream
+      (img: any) => img.live_photo && img.stream,
     );
 
     // 收集实况图视频流URL
@@ -138,10 +141,21 @@ export class XiaohongshuResolver implements PlatformResolver {
 
 function buildXhsStats(interactInfo: any): import("../../types").MediaStats {
   if (!interactInfo) return {};
+
+  const readNumber = (...keys: string[]): number | undefined => {
+    for (const key of keys) {
+      const raw = interactInfo[key];
+      if (raw === undefined || raw === null || raw === "") continue;
+      const value = typeof raw === "number" ? raw : parseInt(String(raw), 10);
+      if (Number.isFinite(value)) return value;
+    }
+    return undefined;
+  };
+
   return {
-    likes: parseInt(interactInfo.like_count, 10) || undefined,
-    favorites: parseInt(interactInfo.collect_count, 10) || undefined,
-    comments: parseInt(interactInfo.comment_count, 10) || undefined,
-    shares: parseInt(interactInfo.share_count, 10) || undefined,
+    likes: readNumber("liked_count", "like_count"),
+    favorites: readNumber("collected_count", "collect_count"),
+    comments: readNumber("comment_count"),
+    shares: readNumber("shared_count", "share_count"),
   };
 }

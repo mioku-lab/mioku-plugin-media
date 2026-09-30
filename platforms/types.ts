@@ -45,7 +45,7 @@ export interface AmagiClient {
       }): Promise<{
         success: boolean;
         code?: number | string | undefined;
-        data: any;
+        data?: any;
         message?: string;
         error?: any;
       }>;
@@ -60,6 +60,8 @@ export interface AmagiClient {
         success: boolean;
         data?: any;
         message?: string;
+        code?: number | string;
+        error?: any;
       }>;
     };
   };

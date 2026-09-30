@@ -1,6 +1,7 @@
 import { createAmagiClient } from "@ikenxuan/amagi";
 import type { MediaConfig } from "../types";
 import type { AmagiClient } from "./types";
+import { mediaHttpTraceTransformResponse } from "./http-trace";
 
 export function createMediaAmagiClient(config: MediaConfig): AmagiClient {
   const cookies: Record<string, string> = {};
@@ -20,7 +21,10 @@ export function createMediaAmagiClient(config: MediaConfig): AmagiClient {
 
   const client = createAmagiClient({
     cookies,
-    request: { timeout: 15000 },
+    request: {
+      timeout: 15000,
+      transformResponse: [mediaHttpTraceTransformResponse],
+    },
   });
 
   return {

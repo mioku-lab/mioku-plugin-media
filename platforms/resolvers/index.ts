@@ -1,6 +1,7 @@
 import type { AmagiClient, ParsedMediaUrl } from "../types";
 import type { ParsedMediaResult } from "../../types";
 import type { PlatformResolver } from "./types";
+import { clearHttpTrace } from "../http-trace";
 import { BilibiliResolver } from "./bilibili";
 import { DouyinResolver } from "./douyin";
 import { KuaishouResolver } from "./kuaishou";
@@ -21,7 +22,13 @@ export async function resolveMedia(
   if (!resolver) {
     throw new Error(`不支持的平台: ${parsed.platform}`);
   }
+  clearHttpTrace();
   return resolver.resolve(client, parsed);
 }
 
-export { BilibiliResolver, DouyinResolver, KuaishouResolver, XiaohongshuResolver };
+export {
+  BilibiliResolver,
+  DouyinResolver,
+  KuaishouResolver,
+  XiaohongshuResolver,
+};

@@ -39,7 +39,8 @@ const BV_REGEX = /\b(BV[a-zA-Z0-9]{10,})\b/;
 const AV_REGEX = /\b(av(\d+))\b/i;
 const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
 const BILIBILI_LIVE_REGEX = /\/(\d+)(?:\?|$)/;
-const DOUYIN_ID_REGEX = /\/video\/(\d+)/;
+const DOUYIN_ID_REGEX = /\/(?:video|note|slides)\/(\d+)/;
+const DOUYIN_SHARE_ID_REGEX = /\/share\/(?:slides|video|note)\/(\d+)/;
 const KUAISHOU_ID_REGEX = /\/short-video\/([a-zA-Z0-9_-]+)/;
 const KUAISHOU_PHOTO_REGEX = /(?:\/fw)?\/photo\/([a-zA-Z0-9_-]+)/;
 const XHS_NOTE_REGEX = /\/explore\/([a-f0-9]{24})/;
@@ -169,6 +170,11 @@ function parseDouyinUrl(url: string): ParsedMediaUrl | null {
   const idMatch = url.match(DOUYIN_ID_REGEX);
   if (idMatch) {
     return { platform: "douyin", id: idMatch[1], subtype: "video" };
+  }
+
+  const shareMatch = url.match(DOUYIN_SHARE_ID_REGEX);
+  if (shareMatch) {
+    return { platform: "douyin", id: shareMatch[1], subtype: "video" };
   }
 
   const noteMatch = url.match(/\/note\/(\d+)/);

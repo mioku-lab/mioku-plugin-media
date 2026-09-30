@@ -3,7 +3,11 @@ import { getService, Services } from "mioku";
 import type { MediaConfig } from "./types";
 import { MEDIA_DEFAULTS } from "./config";
 import { createMediaAmagiClient } from "./platforms/amagi-client";
-import { extractMediaUrlFromEvent, resolveShortUrl, isShortUrl } from "./platforms/url-parser";
+import {
+  extractMediaUrlFromEvent,
+  resolveShortUrl,
+  isShortUrl,
+} from "./platforms/url-parser";
 import { resolveMedia } from "./platforms/resolvers";
 import { sendMediaResult, sendDurationLimitResult } from "./utils/message";
 import { handleMediaError } from "./utils/error-handler";
@@ -15,7 +19,10 @@ function cloneConfig<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-async function addReaction(bot: Bot | undefined, messageId: string | number | undefined): Promise<void> {
+async function addReaction(
+  bot: Bot | undefined,
+  messageId: string | number | undefined,
+): Promise<void> {
   if (!bot || messageId == null) return;
   if (bot.adapter !== "onebotv11") return; // set_msg_emoji_like 是 onebot 专属特殊 API
   try {
@@ -50,7 +57,8 @@ export default definePlugin({
     let amagiClient = createMediaAmagiClient(config);
 
     if (aiService) {
-      for (const skill of createMediaSkills(amagiClient)) aiService.registerSkill(skill);
+      for (const skill of createMediaSkills(amagiClient))
+        aiService.registerSkill(skill);
     }
 
     const disposers: Array<() => void> = [];
@@ -61,7 +69,8 @@ export default definePlugin({
           amagiClient = createMediaAmagiClient(config);
           if (aiService) {
             aiService.removeSkill("media");
-            for (const skill of createMediaSkills(amagiClient)) aiService.registerSkill(skill);
+            for (const skill of createMediaSkills(amagiClient))
+              aiService.registerSkill(skill);
           }
         }),
       );
@@ -73,7 +82,10 @@ export default definePlugin({
       const parsed = extractMediaUrlFromEvent(event);
       if (!parsed) return;
 
-      const messageId = event.message_id ?? (event.raw as { message_seq?: number | string } | undefined)?.message_seq;
+      const messageId =
+        event.message_id ??
+        (event.raw as { message_seq?: number | string } | undefined)
+          ?.message_seq;
 
       const platformLabel =
         parsed.platform === "bilibili"
@@ -90,19 +102,26 @@ export default definePlugin({
 
       await addReaction(bot, messageId);
 
+      let resolvedFrom: string | undefined;
+
       try {
         if (isShortUrl(parsed)) {
-          ctx.logger.info(`[media] 检测到短链接，正在解析: ${parsed.id}`);
-          const resolvedUrl = await resolveShortUrl(parsed.id);
+          const original = parsed.id;
+          ctx.logger.info(`[media] 检测到短链接，正在解析: ${original}`);
+          const resolvedUrl = await resolveShortUrl(original);
           const reParsed = extractMediaUrlFromEvent({
             raw_message: resolvedUrl,
             message: [{ type: "text", data: { text: resolvedUrl } }],
           });
-          if (reParsed) {
-            Object.assign(parsed, reParsed);
-          } else {
-            ctx.logger.warn(`[media] 短链接解析后无法识别: ${resolvedUrl}`);
+
+          if (!reParsed || isShortUrl(reParsed)) {
+            throw new Error(
+              `短链接解析失败: 未能从 ${resolvedUrl} 中提取作品ID（原始短链接: ${original}）`,
+            );
           }
+
+          Object.assign(parsed, reParsed);
+          resolvedFrom = `${original} -> ${resolvedUrl}`;
         }
 
         const result = await resolveMedia(amagiClient, parsed);
@@ -131,6 +150,8 @@ export default definePlugin({
           error,
           platform: platformLabel,
           config,
+          parsed,
+          resolvedFrom,
         });
       }
     });

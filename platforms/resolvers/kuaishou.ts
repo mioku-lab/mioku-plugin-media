@@ -79,15 +79,27 @@ export class KuaishouResolver implements PlatformResolver {
       throw new Error("快手作品数据为空");
     }
 
-    const detail = data.data?.visionVideoDetail || data;
-    const photo = detail.photo || {};
-    const authorInfo = detail.author || {};
+    const detail = data.data?.visionVideoDetail ?? data;
+    const photo = detail.photo ?? {};
+    const authorInfo = detail.author ?? {};
+
+    if (!detail.photo) {
+      const resultCode = data.result ?? data.data?.result;
+      if (typeof resultCode === "number" && resultCode !== 1) {
+        throw new Error(
+          `快手接口返回异常 (result=${resultCode})，可能是需要登录/滑块验证，或作品已删除、不可见`,
+        );
+      }
+      throw new Error("快手作品数据结构不符合预期：响应中缺少 photo 字段");
+    }
 
     const title = photo.caption || "未知标题";
-    const author = authorInfo.name || "未知作者";
+    const author = authorInfo.name || photo.userName || "未知作者";
     const description = photo.caption || "";
-    const coverUrl = photo.coverUrl || "";
-    const duration = photo.duration ? Math.floor(photo.duration / 1000) : undefined;
+    const coverUrl = photo.coverUrl || photo.coverUrls?.[0]?.url || "";
+    const duration = photo.duration
+      ? Math.floor(photo.duration / 1000)
+      : undefined;
 
     let videoUrl = "";
 
@@ -95,6 +107,8 @@ export class KuaishouResolver implements PlatformResolver {
       videoUrl = photo.photoUrl;
     } else if (photo.croppedPhotoUrl) {
       videoUrl = photo.croppedPhotoUrl;
+    } else if (photo.mainMvUrls?.[0]?.url) {
+      videoUrl = photo.mainMvUrls[0].url;
     } else if (
       photo.videoResource?.h264?.adaptationSet?.[0]?.representation?.[0]?.url
     ) {
@@ -133,7 +147,7 @@ export class KuaishouResolver implements PlatformResolver {
         likes: photo.likeCount || photo.likeCnt,
         comments: photo.commentCount || photo.commentCnt,
         views: photo.viewCount || photo.viewCnt,
-        shares: photo.shareCount || photo.shareCnt,
+        shares: photo.shareCount || photo.shareCnt || photo.forwardCount,
       },
     };
   }
